@@ -1,15 +1,22 @@
 {
-  "name": "hello-world",
+  "name": "snail_mail",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest ./"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ask-sdk-core": "^2.0.0",
-    "ask-sdk-model": "^1.0.0"
+    "cheerio": "^1.0.0-rc.2",
+    "isomorphic-fetch": "^2.2.1"
+  },
+  "devDependencies": {
+    "ask-sdk-core": "^2.1.0",
+    "ask-sdk-model": "^1.7.1",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-jest": "^21.25.1",
+    "jest": "^23.6.0"
   }
 }

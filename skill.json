@@ -1,30 +1,57 @@
 {
-  "manifest": {
-    "publishingInformation": {
-      "locales": {
-        "en-US": {
-          "summary": "Sample Short Description",
-          "examplePhrases": [
-            "Alexa open hello world",
-            "Alexa tell hello world hello",
-            "Alexa ask hello world say hello"
-          ],
-          "name": "snail_mail",
-          "description": "Sample Full Description"
-        }
-      },
-      "isAvailableWorldwide": true,
-      "testingInstructions": "Sample Testing Instructions.",
-      "category": "EDUCATION_AND_REFERENCE",
-      "distributionCountries": []
-    },
-    "apis": {
-      "custom": {
-        "endpoint": {
-          "sourceDir": "lambda/custom"
-        }
-      }
-    },
-    "manifestVersion": "1.0"
-  }
+ "manifest": {
+   "publishingInformation": {
+     "locales": {
+       "en-US": {
+         "summary": "Find the USPS collection boxes nearest you",
+         "examplePhrases": [
+           "Alexa ask mail buddy for mailboxes near me",
+           "Alexa ask mail buddy to find mailboxes",
+           "Alexa ask mail buddy for mailboxes"
+         ],
+         "keywords": [
+           "mail",
+           "mailbox",
+           "post",
+           "postbox"
+         ],
+         "name": "mail buddy",
+         "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/59a3/568a1d4eecf343bab68abc6f4b6aa017/APP_ICON?versionId=C05wjB3FHObbbR4NKjX7ghRI6sHoN4MK&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1540394841&Signature=eIuW6wjtZDLbkrkki1eG3VqxZ%2Fc%3D",
+         "description": "Find the USPS collection boxes nearest you, along with collection times.",
+         "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/1c48/9582aae3d5914eb5b161053225f9f498/APP_ICON_LARGE?versionId=44JEyklnDHzwP8.w0A0gmm._jadHG6cC&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1540394841&Signature=G2OL0SMLdn2z8GVvb%2FLG1RUJbAI%3D"
+       }
+     },
+     "isAvailableWorldwide": false,
+     "testingInstructions": "1. Enter address for your device in Alexa settings\n2. Install mail buddy and grant address permission to it\n3. Say \"Alexa, ask mail buddy for mailboxes\"",
+     "category": "ORGANIZERS_AND_ASSISTANTS",
+     "distributionCountries": [
+       "US"
+     ]
+   },
+   "apis": {
+     "custom": {
+       "endpoint": {
+         "sourceDir": "lambda/custom"
+       }
+     }
+   },
+   "manifestVersion": "1.0",
+   "permissions": [
+     {
+       "name": "alexa::devices:all:address:full:read"
+     }
+   ],
+   "privacyAndCompliance": {
+     "allowsPurchases": false,
+     "locales": {
+       "en-US": {
+         "privacyPolicyUrl": "https://eebbesen.gitlab.io/plain-html/mail_buddy_privacy.html"
+       }
+     },
+     "isExportCompliant": true,
+     "containsAds": false,
+     "isChildDirected": false,
+     "usesPersonalInfo": false
+   }
+ }
 }

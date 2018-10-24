@@ -1,41 +1,31 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "greeter",
-      "types": [
-
-      ],
+      "invocationName": "mail buddy",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
-          "samples": [
-
-          ]
+          "samples": []
         },
         {
           "name": "AMAZON.HelpIntent",
-          "samples": [
-
-          ]
+          "samples": []
         },
         {
           "name": "AMAZON.StopIntent",
-          "samples": [
-
-          ]
+          "samples": []
         },
         {
-          "name": "HelloWorldIntent",
-          "slots": [
-
-          ],
+          "name": "CollectionBoxIntent",
+          "slots": [],
           "samples": [
-            "hello",
-            "say hello",
-            "say hello world"
+            "find mailboxes",
+            "mailboxes",
+            "mailboxes near me"
           ]
         }
-      ]
+      ],
+      "types": []
     }
   }
 }
