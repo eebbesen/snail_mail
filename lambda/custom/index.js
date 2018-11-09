@@ -118,6 +118,10 @@ const expandTimesMap = function(map) {
         const tsa = map.get('Sat');
         times.set('Saturday', [twelveToTwentyFour(tsa), tsa]);
         break;
+      case 'Sun':
+        const tsu = map.get('Sun');
+        times.set('Sunday', [twelveToTwentyFour(tsu), tsu]);
+        break;
       default:
         console.log(`NO ENTRY FOR ${k}`);
     };
@@ -126,14 +130,11 @@ const expandTimesMap = function(map) {
   return times;
 };
 
-const nextPickupTime = function(hours, timeZone) {
+const nextPickupTime = function(times, timeZone) {
   const deviceTime = moment.tz(timeZone);
   const day = deviceTime.format('dddd');
   const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
-
-  const times = expandTimesMap(hours);
   const lastPickUpToday = times.get(day)[0];
-
   let pickUpDay;
   let pickUpTime;
 
@@ -141,7 +142,11 @@ const nextPickupTime = function(hours, timeZone) {
     pickUpDay = 'Today';
     pickUpTime = times.get(day)[1];
   } else {
-    const nextDay = moment().add(1, 'days').format('dddd') || moment().add(2, 'days').format('dddd');
+    let nextDay = moment().add(1, 'days').format('dddd');
+    if (times.get(nextDay) === undefined) {
+      nextDay = moment().add(2, 'days').format('dddd');
+    }
+
     pickUpDay = nextDay;
     pickUpTime = times.get(nextDay)[1];
   }
@@ -149,6 +154,7 @@ const nextPickupTime = function(hours, timeZone) {
   return `${pickUpDay} at ${pickUpTime}`;
 };
 
+// assumes API provides pickup times in local time zone
 const boxLocationCall = async function(addressData, timeZone) {
   const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
   const boxData = await getBoxes(address);

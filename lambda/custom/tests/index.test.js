@@ -41,8 +41,9 @@ test('gets next pickup time current day', () => {
   times.set('Mon-Fri', '11:59pm');
   times.set('Sat', '10:00am');
   times.set('Sun', 'Closed');
+  const hours = index.expandTimesMap(times);
 
-  const result = index.nextPickupTime(times,'America/New_York');
+  const result = index.nextPickupTime(hours,'America/New_York');
 
   expect(result).toEqual('Today at 11:59pm');
 });
@@ -51,12 +52,26 @@ test('gets next pickup time next day', () => {
   const times = new Map();
   times.set('Mon-Fri', '12:01am');
   times.set('Sat', '12:01am');
-  times.set('Sun', 'Closed');
+  times.set('Sun', '12:01am');
+  const hours = index.expandTimesMap(times);
 
-  const result = index.nextPickupTime(times,'America/New_York');
+  const result = index.nextPickupTime(hours,'America/New_York');
 
   const nextDay = moment().add(1, 'days').format('dddd')
   expect(result).toEqual(`${nextDay} at 12:01am`);
+});
+
+test('gets next pickup time none tomorrow', () => {
+  const today = moment().format('dddd');
+  const twoDaysAhead = moment().add(2, 'days').format('dddd');
+  const hours = new Map();
+  hours.set(today, 1, ['12:01am']);
+  hours.set(twoDaysAhead, [2359, '11:59pm']);
+
+  const result = index.nextPickupTime(hours,'America/New_York');
+
+  const nextDay = moment().add(2, 'days').format('dddd')
+  expect(result).toEqual(`${nextDay} at 11:59pm`);
 });
 
 test('expands times map', () => {
