@@ -3,6 +3,7 @@
 
 const Alexa = require('ask-sdk-core');
 const cheerio = require('cheerio');
+const moment = require('moment-timezone');
 require('isomorphic-fetch');
 
 const getBoxes = async function(address) {
@@ -41,7 +42,6 @@ const parseHtml = function(html) {
 };
 
 const lambdaServiceWrapper = function(handlerInput) {
-  console.log('aaaaaa', handlerInput);
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
   const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
@@ -83,7 +83,72 @@ const lambdaServiceWrapper = function(handlerInput) {
   }
 };
 
-const boxLocationCall = async function(addressData) {
+// convert String time to Integer
+// 0 means no time -- not using String or null for type safety
+const twelveToTwentyFour = function(time){
+  if (time.indexOf(':') < 0 ) {
+    return 0
+  } else if (time.indexOf('am') > 0) {
+    let t = parseInt(time.replace(/\D/g, ''));
+    if (time.indexOf('12:') === 0) {
+      t -= 1200;
+    }
+    return t;
+  } else {
+    let t = parseInt(time.replace(/\D/g, ''));
+    if (time.indexOf('12:') === 0) {
+      t -= 2400;
+    }
+    return t + 1200;
+  }
+};
+
+const expandTimesMap = function(map) {
+  const times = new Map();
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  const keys = map.keys();
+  for (k of keys) {
+    switch(k) {
+      case 'Mon-Fri':
+        const tmf = map.get('Mon-Fri');
+        weekdays.forEach(d => { times.set(d, [twelveToTwentyFour(tmf), tmf])});
+        break;
+      case 'Sat':
+        const tsa = map.get('Sat');
+        times.set('Saturday', [twelveToTwentyFour(tsa), tsa]);
+        break;
+      default:
+        console.log(`NO ENTRY FOR ${k}`);
+    };
+  }
+
+  return times;
+};
+
+const nextPickupTime = function(hours, timeZone) {
+  const deviceTime = moment.tz(timeZone);
+  const day = deviceTime.format('dddd');
+  const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
+
+  const times = expandTimesMap(hours);
+  const lastPickUpToday = times.get(day)[0];
+
+  let pickUpDay;
+  let pickUpTime;
+
+  if(lastPickUpToday > currentHourMin) {
+    pickUpDay = 'Today';
+    pickUpTime = times.get(day)[1];
+  } else {
+    pickUpDay = moment().add(1, 'days').format('dddd');
+    pickUpTime = times.get(day)[1];
+  }
+
+  return `${pickUpDay} at ${pickUpTime}`;
+};
+
+const boxLocationCall = async function(addressData, timeZone) {
   const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
   const boxData = await getBoxes(address);
   console.log('SNAILMAIL: boxData', boxData);
@@ -117,9 +182,12 @@ const LaunchRequestHandler = {
       const { deviceId } = requestEnvelope.context.System.device;
       const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
       const address = await deviceAddressServiceClient.getFullAddress(deviceId);
+      const upsServiceClient = serviceClientFactory.getUpsServiceClient();
+      const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
+      consle.log('bbbbbbb', timeZone);
       // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
 
-      const responseText = await boxLocationCall(address);
+      const responseText = await boxLocationCall(address, timeZone);
       console.log('SNAILMAIL: responseText', responseText);
       return responseBuilder
         .speak(responseText)
@@ -249,5 +317,8 @@ exports.handler = skillBuilder
   .lambda();
 
 exports.boxLocationCall = boxLocationCall;
-exports.parseHtml = parseHtml;
+exports.expandTimesMap = expandTimesMap;
 exports.getBoxes = getBoxes;
+exports.nextPickupTime = nextPickupTime;
+exports.parseHtml = parseHtml;
+exports.twelveToTwentyFour = twelveToTwentyFour;
