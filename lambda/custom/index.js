@@ -141,8 +141,9 @@ const nextPickupTime = function(hours, timeZone) {
     pickUpDay = 'Today';
     pickUpTime = times.get(day)[1];
   } else {
-    pickUpDay = moment().add(1, 'days').format('dddd');
-    pickUpTime = times.get(day)[1];
+    const nextDay = moment().add(1, 'days').format('dddd') || moment().add(2, 'days').format('dddd');
+    pickUpDay = nextDay;
+    pickUpTime = times.get(nextDay)[1];
   }
 
   return `${pickUpDay} at ${pickUpTime}`;
