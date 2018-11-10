@@ -3,6 +3,7 @@
 
 const Alexa = require('ask-sdk-core');
 const cheerio = require('cheerio');
+const moment = require('moment-timezone');
 require('isomorphic-fetch');
 
 const getBoxes = async function(address) {
@@ -18,12 +19,12 @@ const parseHtml = function(html) {
   const records = new Array();
   const $ = cheerio.load(html.toString());
   $('.result').each(function(i, r) {
-    const rr = new Array();
+    const rr = new Map();
     $(this).find('.hoursTable_hours').find('li').each(function (i, o) {
       const key = $(this).find('.days').text();
       const val = $(this).find('.hours').text().replace(/(\t|\n)/g, '');
       if ((key + val).trim().length > 1) {
-        rr[key] = val;
+        rr.set(key, val);
       }
     });
 
@@ -37,11 +38,11 @@ const parseHtml = function(html) {
       hours: rr,
     });
   });
+
   return records;
 };
 
 const lambdaServiceWrapper = function(handlerInput) {
-  console.log('aaaaaa', handlerInput);
   const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
   const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
@@ -79,11 +80,96 @@ const lambdaServiceWrapper = function(handlerInput) {
   } else {
     return handlerInput.responseBuilder
       .speak('Please grant me permission to access your device address. Without this permission I cannot find collection boxes near you!');
-
   }
 };
 
-const boxLocationCall = async function(addressData) {
+// convert String time to Integer
+// 0 means no time -- not using String or null for type safety
+const twelveToTwentyFour = function(time){
+  if (time.indexOf(':') < 0 ) {
+    return 0
+  } else if (time.indexOf('am') > 0) {
+    let t = parseInt(time.replace(/\D/g, ''));
+    if (time.indexOf('12:') === 0) {
+      t -= 1200;
+    }
+    return t;
+  } else {
+    let t = parseInt(time.replace(/\D/g, ''));
+    if (time.indexOf('12:') === 0) {
+      t -= 2400;
+    }
+    return t + 1200;
+  }
+};
+
+const expandTimesMap = function(map) {
+  const times = new Map();
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  const keys = map.keys();
+  for (k of keys) {
+    switch(k) {
+      case 'Mon-Fri':
+        const tmf = map.get('Mon-Fri');
+        if (tmf != 'Closed') {
+          weekdays.forEach(d => { times.set(d, [twelveToTwentyFour(tmf), tmf])});
+        }
+        break;
+      case 'Sat':
+        const tsa = map.get('Sat');
+        if (tsa != 'Closed') {
+          times.set('Saturday', [twelveToTwentyFour(tsa), tsa]);
+        }
+        break;
+      case 'Sun':
+        const tsu = map.get('Sun');
+        if (tsu != 'Closed') {
+          times.set('Sunday', [twelveToTwentyFour(tsu), tsu]);
+        }
+        break;
+      case 'Sat-Sun':
+        const tss = map.get('Sat-Sun');
+        if (tss != 'Closed') {
+          times.set('Saturday', [twelveToTwentyFour(tss), tss]);
+          times.set('Sunday', [twelveToTwentyFour(tss), tss]);
+        }
+        break;
+      default:
+        console.log(`NO ENTRY FOR ${k}`);
+    };
+  }
+
+  return times;
+};
+
+const nextPickupTime = function(times, timeZone) {
+  const deviceTime = moment.tz(timeZone);
+  const day = deviceTime.format('dddd');
+  const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
+
+  const lastPickUpToday = times.get(day) ? times.get(day)[0] : 0;
+  let pickUpDay;
+  let pickUpTime;
+
+  if(lastPickUpToday > currentHourMin) {
+    pickUpDay = 'Today';
+    pickUpTime = times.get(day)[1];
+  } else {
+    let nextDay = moment().add(1, 'days').format('dddd');
+    if (times.get(nextDay) === undefined) {
+      nextDay = moment().add(2, 'days').format('dddd');
+    }
+
+    pickUpDay = nextDay;
+    pickUpTime = times.get(nextDay)[1];
+  }
+
+  return `${pickUpDay} at ${pickUpTime}`;
+};
+
+// assumes API provides pickup times in local time zone
+const boxLocationCall = async function(addressData, timeZone) {
   const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
   const boxData = await getBoxes(address);
   console.log('SNAILMAIL: boxData', boxData);
@@ -92,7 +178,15 @@ const boxLocationCall = async function(addressData) {
 
   let response1 = 'Sorry, I could not find any mailboxes near you. Please make sure your Alexa device has your correct address entered';
   if (rec && rec.distance) {
+    console.log('SNAILMAIL: ', 'before distance call');
     response1 = `Your closest mailbox is ${rec.distance} miles away at ${rec.street} in ${rec.city}.`;
+    console.log('SNAILMAIL: ', 'after distance call');
+    const expandTimes = expandTimesMap(rec.hours);
+    const npt = nextPickupTime(expandTimes, timeZone);
+    console.log('SNAILMAIL: ', 'after pickup time call');
+    if (npt) {
+      response1 += ` Your next pickup time is ${npt}`;
+    }
   }
 
   return response1;
@@ -117,9 +211,11 @@ const LaunchRequestHandler = {
       const { deviceId } = requestEnvelope.context.System.device;
       const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
       const address = await deviceAddressServiceClient.getFullAddress(deviceId);
+      const upsServiceClient = serviceClientFactory.getUpsServiceClient();
+      const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
       // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
 
-      const responseText = await boxLocationCall(address);
+      const responseText = await boxLocationCall(address, timeZone);
       console.log('SNAILMAIL: responseText', responseText);
       return responseBuilder
         .speak(responseText)
@@ -249,5 +345,8 @@ exports.handler = skillBuilder
   .lambda();
 
 exports.boxLocationCall = boxLocationCall;
-exports.parseHtml = parseHtml;
+exports.expandTimesMap = expandTimesMap;
 exports.getBoxes = getBoxes;
+exports.nextPickupTime = nextPickupTime;
+exports.parseHtml = parseHtml;
+exports.twelveToTwentyFour = twelveToTwentyFour;

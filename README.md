@@ -2,17 +2,17 @@ Alexa skill to find the USPS collection boxes nearest you!
 
 USPS collection boxes are the blue standalone mailboxes (well, sometimes they're slots in a wall or something) into which you can deposit mail to be picked up by a postal worker. Collection boxes have a consistent pickup times.
 
-mail mail mail will give you the distance and location of your closest collection boxes along with their pickup times.
+mail buddy will give you the distance and location of your closest collection boxes along with their pickup times.
 
 # How it works
-mail mail mail uses an undocumented USPS endpoint that doesn't require [a Web Tools API key](https://www.usps.com/business/web-tools-apis/welcome.htm) like some of its other endpoints. This endpoint takes a URI-encoded street address (zip or street address & zip) and will provide distances to USPS collection boxes (the deep blue boxes you can put mail _into_) along with distance and pickup times. [This web interface](https://tools.usps.com/go/POLocatorAction.action) is where I found and reverse engineered the USPS API call -- it is where you can find the information provided by mail mail mail in a web page format.
+mail buddy uses an undocumented USPS endpoint that doesn't require [a Web Tools API key](https://www.usps.com/business/web-tools-apis/welcome.htm) like some of its other endpoints. This endpoint takes a URI-encoded street address (zip or street address & zip) and will provide distances to USPS collection boxes (the deep blue boxes you can put mail _into_) along with distance and pickup times. [This web interface](https://tools.usps.com/go/POLocatorAction.action) is where I found and reverse engineered the USPS API call -- it is where you can find the information provided by mail buddy in a web page format.
 
 The underlying USPS endpoint is undocumented so use it at your own risk. It may cease to exist, the USPS may throttle or block your calls, etc.
 
 ## What are those green USPS boxes?
 Great question! Those are postal relay boxes. They don't accept mail from the public but are used by mail carriers to store mail so they can have a lighter load during their route. The USPS has figured out how to maximize the value they get from these to save time and money (see [this article](https://mentalfloss.com/article/71244/what-are-those-dark-green-mailboxes-dont-accept-mail)).
 
-These don't appear in the results that mail mail mail creates.
+These don't appear in the results that mail buddy creates.
 
 # Development
 This was build with NodeJS using the [Alexa Skills Kit Command Line Interface](https://developer.amazon.com/docs/smapi/ask-cli-intro.html).
@@ -29,7 +29,6 @@ https://www.npmjs.com/get-npm
 ### Amazon Skills Kit Command Line Interface
 https://www.npmjs.com/package/ask-cli
 
-
 ## Building
 ```bash
 cd lambda/custom
@@ -44,14 +43,17 @@ ask deploy
 ## Testing
 ### JavaScript
 This suite includes a test which hits the USPS enpoint and gets results, so be aware if you are offline, firewalled, or using a CI provider that doesn't like these sorts of external calls.
+
+(Changin `test` to `test.skip` in your test files is a great way to skip any tests you don't want to run.)
 ```bash
 cd lambda/custom
 npm test
 ```
 
 ### Alexa
+Simulate a call to an Alexa device. Note that your spoken phrase may not be as cleanly interpreted by Alexa as it is when you type it :).
 ```bash
-ask simulate -t 'Alexa, open mail mail mail' -l en-US
+ask simulate -t 'Alexa, open mail buddy' -l en-US
 ```
 
 ## cURL example
