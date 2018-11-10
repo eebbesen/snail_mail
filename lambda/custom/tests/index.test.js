@@ -33,14 +33,46 @@ test('integration: gets mailboxes with address', async () => {
   expect(rec.city).toEqual('SAINT PAUL');
   expect(rec.state).toEqual('MN');
   expect(rec.zip).toEqual('55105');
-  expect(rec.hours['Mon-Fri']).toBe('4:00pm');
+  expect(rec.hours.get('Mon-Fri')).toBe('4:00pm');
 });
 
+// test.only('integration: gets mailboxes with address', async () => {
+//   console.log('********** REALLY HITS USPS WEB API **********');
+//   const res = await index.getBoxes('55101');
+//   const records = index.parseHtml(res);
+//   expect(records.length).toBeGreaterThan(1);
+//   const rec = records[0];
+//   console.log(rec)
+//   // expect(rec.distance).toEqual('0.1');
+//   // expect(rec.street).toEqual('1579 GRAND AVE');
+//   // expect(rec.city).toEqual('SAINT PAUL');
+//   // expect(rec.state).toEqual('MN');
+//   // expect(rec.zip).toEqual('55105');
+//   // expect(rec.hours.get('Mon-Fri')).toBe('4:00pm');
+// });
+
+// add test for Sat-Sun
+
 test('gets next pickup time current day', () => {
+  const today = moment().format('dddd');
+
   const times = new Map();
-  times.set('Mon-Fri', '11:59pm');
-  times.set('Sat', '10:00am');
-  times.set('Sun', 'Closed');
+  switch(today){
+    case 'Sunday':
+      times.set('Mon-Fri', 'Closed');
+      times.set('Sat', '1:00am');
+      times.set('Sun', '11:59pm');
+      break;
+    case 'Saturday':
+      times.set('Mon-Fri', '1:00am');
+      times.set('Sat', '11:59pm');
+      times.set('Sun', 'Closed');
+      break;
+    default:
+      times.set('Mon-Fri', '11:59pm');
+      times.set('Sat', '10:00am');
+      times.set('Sun', 'Closed');
+    }
   const hours = index.expandTimesMap(times);
 
   const result = index.nextPickupTime(hours,'America/New_York');
@@ -65,7 +97,7 @@ test('gets next pickup time none tomorrow', () => {
   const today = moment().format('dddd');
   const twoDaysAhead = moment().add(2, 'days').format('dddd');
   const hours = new Map();
-  hours.set(today, 1, ['12:01am']);
+  hours.set(today, [1, '12:01am']);
   hours.set(twoDaysAhead, [2359, '11:59pm']);
 
   const result = index.nextPickupTime(hours,'America/New_York');
@@ -94,6 +126,30 @@ test('expands times map', () => {
   expect(result.get('Friday')[1]).toEqual('3:00pm');
   expect(result.get('Saturday')[0]).toEqual(1100);
   expect(result.get('Saturday')[1]).toEqual('11:00am');
+});
+
+test('expands times map Sat-Sun', () => {
+  const times = new Map();
+  times.set('Sat-Sun', '3:00pm');
+
+  const result = index.expandTimesMap(times);
+
+  expect(result.get('Saturday')[0]).toEqual(1500);
+  expect(result.get('Saturday')[1]).toEqual('3:00pm');
+  expect(result.get('Sunday')[0]).toEqual(1500);
+  expect(result.get('Sunday')[1]).toEqual('3:00pm');
+});
+
+test('expands times map removes closed', () => {
+  const times = new Map();
+  times.set('Mon-Fri', 'Closed');
+  times.set('Sat-Sun', 'Closed');
+  times.set('Sat', 'Closed');
+  times.set('Sun', 'Closed');
+
+  const result = index.expandTimesMap(times);
+
+  expect(result.size).toBe(0);
 });
 
 test('handles "Closed" in time conversion', () => {

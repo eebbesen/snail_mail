@@ -19,12 +19,12 @@ const parseHtml = function(html) {
   const records = new Array();
   const $ = cheerio.load(html.toString());
   $('.result').each(function(i, r) {
-    const rr = new Array();
+    const rr = new Map();
     $(this).find('.hoursTable_hours').find('li').each(function (i, o) {
       const key = $(this).find('.days').text();
       const val = $(this).find('.hours').text().replace(/(\t|\n)/g, '');
       if ((key + val).trim().length > 1) {
-        rr[key] = val;
+        rr.set(key, val);
       }
     });
 
@@ -38,6 +38,7 @@ const parseHtml = function(html) {
       hours: rr,
     });
   });
+
   return records;
 };
 
@@ -79,7 +80,6 @@ const lambdaServiceWrapper = function(handlerInput) {
   } else {
     return handlerInput.responseBuilder
       .speak('Please grant me permission to access your device address. Without this permission I cannot find collection boxes near you!');
-
   }
 };
 
@@ -104,6 +104,7 @@ const twelveToTwentyFour = function(time){
 };
 
 const expandTimesMap = function(map) {
+  console.log('bbbbbb', map)
   const times = new Map();
   const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -112,15 +113,28 @@ const expandTimesMap = function(map) {
     switch(k) {
       case 'Mon-Fri':
         const tmf = map.get('Mon-Fri');
-        weekdays.forEach(d => { times.set(d, [twelveToTwentyFour(tmf), tmf])});
+        if (tmf != 'Closed') {
+          weekdays.forEach(d => { times.set(d, [twelveToTwentyFour(tmf), tmf])});
+        }
         break;
       case 'Sat':
         const tsa = map.get('Sat');
-        times.set('Saturday', [twelveToTwentyFour(tsa), tsa]);
+        if (tsa != 'Closed') {
+          times.set('Saturday', [twelveToTwentyFour(tsa), tsa]);
+        }
         break;
       case 'Sun':
         const tsu = map.get('Sun');
-        times.set('Sunday', [twelveToTwentyFour(tsu), tsu]);
+        if (tsu != 'Closed') {
+          times.set('Sunday', [twelveToTwentyFour(tsu), tsu]);
+        }
+        break;
+      case 'Sat-Sun':
+        const tss = map.get('Sat-Sun');
+        if (tss != 'Closed') {
+          times.set('Saturday', [twelveToTwentyFour(tss), tss]);
+          times.set('Sunday', [twelveToTwentyFour(tss), tss]);
+        }
         break;
       default:
         console.log(`NO ENTRY FOR ${k}`);
@@ -134,6 +148,8 @@ const nextPickupTime = function(times, timeZone) {
   const deviceTime = moment.tz(timeZone);
   const day = deviceTime.format('dddd');
   const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
+
+  console.log('yyyyyyyy', times, timeZone);
   const lastPickUpToday = times.get(day)[0];
   let pickUpDay;
   let pickUpTime;
@@ -164,7 +180,15 @@ const boxLocationCall = async function(addressData, timeZone) {
 
   let response1 = 'Sorry, I could not find any mailboxes near you. Please make sure your Alexa device has your correct address entered';
   if (rec && rec.distance) {
+    console.log('SNAILMAIL: ', 'before distance call');
     response1 = `Your closest mailbox is ${rec.distance} miles away at ${rec.street} in ${rec.city}.`;
+    console.log('SNAILMAIL: ', 'after distance call');
+    const expandTimes = expandTimesMap(rec.hours);
+    const npt = nextPickupTime(expandTimes, timeZone);
+    console.log('SNAILMAIL: ', 'after pickup time call');
+    if (npt) {
+      response1 += npt;
+    }
   }
 
   return response1;
@@ -191,7 +215,6 @@ const LaunchRequestHandler = {
       const address = await deviceAddressServiceClient.getFullAddress(deviceId);
       const upsServiceClient = serviceClientFactory.getUpsServiceClient();
       const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
-      consle.log('bbbbbbb', timeZone);
       // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
 
       const responseText = await boxLocationCall(address, timeZone);
