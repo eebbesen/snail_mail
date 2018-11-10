@@ -150,7 +150,7 @@ const nextPickupTime = function(times, timeZone) {
   const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
 
   console.log('yyyyyyyy', times, timeZone);
-  const lastPickUpToday = times.get(day)[0];
+  const lastPickUpToday = times.get(day) ? times.get(day)[0] : 0;
   let pickUpDay;
   let pickUpTime;
 
@@ -187,7 +187,7 @@ const boxLocationCall = async function(addressData, timeZone) {
     const npt = nextPickupTime(expandTimes, timeZone);
     console.log('SNAILMAIL: ', 'after pickup time call');
     if (npt) {
-      response1 += npt;
+      response1 += `Your next pickup time is ${npt}`;
     }
   }
 
