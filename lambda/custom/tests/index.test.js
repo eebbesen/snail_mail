@@ -36,23 +36,6 @@ test('integration: gets mailboxes with address', async () => {
   expect(rec.hours.get('Mon-Fri')).toBe('4:00pm');
 });
 
-// test.only('integration: gets mailboxes with address', async () => {
-//   console.log('********** REALLY HITS USPS WEB API **********');
-//   const res = await index.getBoxes('55101');
-//   const records = index.parseHtml(res);
-//   expect(records.length).toBeGreaterThan(1);
-//   const rec = records[0];
-//   console.log(rec)
-//   // expect(rec.distance).toEqual('0.1');
-//   // expect(rec.street).toEqual('1579 GRAND AVE');
-//   // expect(rec.city).toEqual('SAINT PAUL');
-//   // expect(rec.state).toEqual('MN');
-//   // expect(rec.zip).toEqual('55105');
-//   // expect(rec.hours.get('Mon-Fri')).toBe('4:00pm');
-// });
-
-// add test for Sat-Sun
-
 test('gets next pickup time current day', () => {
   const today = moment().format('dddd');
 
