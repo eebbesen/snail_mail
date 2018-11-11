@@ -4,7 +4,12 @@
 const Alexa = require('ask-sdk-core');
 const cheerio = require('cheerio');
 const moment = require('moment-timezone');
+const { version } = require('./package.json');
 require('isomorphic-fetch');
+
+const logger = function(...args) {
+  console.log(`SNAILMAIL ${version}:`, ...args);
+}
 
 const getBoxes = async function(address) {
   const url = `https://tools.usps.com/go/POLocatorAction.action?locationTypeQ=collectionbox&address=${encodeURI(address)}`
@@ -40,47 +45,6 @@ const parseHtml = function(html) {
   });
 
   return records;
-};
-
-const lambdaServiceWrapper = function(handlerInput) {
-  const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
-  const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-  console.log('bbbbbb', requestAttributes, 'sssss', sessionAttributes);
-  if (this.event && this.event.context.System.user.permissions) {
-    const requestId = this.event.request.requestId;
-    const token = this.event.context.System.user.permissions.consentToken;
-    const apiEndpoint = this.event.context.System.apiEndpoint;
-    const deviceId = this.event.context.System.device.deviceId;
-    const ds = new Alexa.services.DirectiveService();
-    const das = new Alexa.services.DeviceAddressService();
-    const directive = new Alexa.directives.VoicePlayerSpeakDirective(requestId, 'Looking for boxes. Boop beep bop boop beep bop beep!');
-
-    const progressiveResponse = ds.enqueue(directive, apiEndpoint, token)
-      .catch((err) => {
-        console.log('SNAILMAIL: error in progressiveResponse:', err)
-      });
-
-    const getAddress = das.getFullAddress(deviceId, apiEndpoint, token)
-      .then((data) => {
-        boxLocationCall(data)
-          .then(location => {
-            return handlerInput.responseBuilder
-              .speak(location);
-          })
-      })
-      .catch((error) => {
-        console.log('SNAILMAIL: getAddress promise error:', error.message)
-        return handlerInput.responseBuilder
-          .speak(location);
-      });
-
-    Promise.all([progressiveResponse, getAddress])
-      .then(() => {});
-  } else {
-    return handlerInput.responseBuilder
-      .speak('Please grant me permission to access your device address. Without this permission I cannot find collection boxes near you!');
-  }
 };
 
 // convert String time to Integer
@@ -136,7 +100,7 @@ const expandTimesMap = function(map) {
         }
         break;
       default:
-        console.log(`NO ENTRY FOR ${k}`);
+        logger(`NO ENTRY FOR ${k}`);
     };
   }
 
@@ -172,18 +136,18 @@ const nextPickupTime = function(times, timeZone) {
 const boxLocationCall = async function(addressData, timeZone) {
   const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
   const boxData = await getBoxes(address);
-  console.log('SNAILMAIL: boxData', boxData);
+  logger('boxData', boxData);
   const rec = parseHtml(boxData)[0];
-  console.log('SNAILMAIL: recs', rec);
+  logger('recs', rec);
 
   let response1 = 'Sorry, I could not find any mailboxes near you. Please make sure your Alexa device has your correct address entered';
   if (rec && rec.distance) {
-    console.log('SNAILMAIL: ', 'before distance call');
+    logger('before distance call');
     response1 = `Your closest mailbox is ${rec.distance} miles away at ${rec.street} in ${rec.city}.`;
-    console.log('SNAILMAIL: ', 'after distance call');
+    logger('after distance call');
     const expandTimes = expandTimesMap(rec.hours);
     const npt = nextPickupTime(expandTimes, timeZone);
-    console.log('SNAILMAIL: ', 'after pickup time call');
+    logger('after pickup time call');
     if (npt) {
       response1 += ` Your next pickup time is ${npt}`;
     }
@@ -193,7 +157,7 @@ const boxLocationCall = async function(addressData, timeZone) {
 }
 
 const executor = async function(handlerInput) {
-  console.log('SNAILMAIL:', 'CollectionBoxIntentHandler');
+  logger('CollectionBoxIntentHandler');
   const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
 
   const consentToken = requestEnvelope.context.System.user.permissions
@@ -212,20 +176,20 @@ const executor = async function(handlerInput) {
 
     // let the user know we're working on it...
     const pr = await progressiveResponse(requestEnvelope, directiveServiceClient);
-    console.log('SNAILMAIL: ', pr);
+    logger(pr);
 
     const address = await deviceAddressServiceClient.getFullAddress(deviceId);
     const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
-    // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
+    // logger('Address successfully retrieved, now responding to user.', address);
 
     const responseText = await boxLocationCall(address, timeZone);
-    console.log('SNAILMAIL: responseText', responseText);
+    logger(responseText', responseText);
     return responseBuilder
       .speak(responseText)
       .getResponse();
   } catch (error) {
     if (error.name !== 'ServiceError') {
-      console.log('SNAILMAIL:', error);
+      logger(error);
       const response = responseBuilder.speak('there was an error').getResponse();
       return response;
     }
@@ -280,7 +244,7 @@ const HelpIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent';
   },
   handle(handlerInput) {
-    console.log('SNAILMAIL:', 'HelpIntentHandler');
+    logger('HelpIntentHandler');
     const speechText = 'I will tell you where to find USPS collection boxes. They are the blue ones into which you put mail you want to send.';
 
     return handlerInput.responseBuilder
@@ -298,7 +262,7 @@ const CancelAndStopIntentHandler = {
         || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent');
   },
   handle(handlerInput) {
-    console.log('SNAILMAIL:', 'CancelAndStopIntentHandler');
+    logger('CancelAndStopIntentHandler');
     const speechText = 'Goodbye!';
 
     return handlerInput.responseBuilder
@@ -313,8 +277,8 @@ const SessionEndedRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'SessionEndedRequest';
   },
   handle(handlerInput) {
-    console.log('SNAILMAIL:', 'SessionEndedRequestHandler');
-    console.log(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
+    logger('SessionEndedRequestHandler');
+    logger(`Session ended with reason: ${handlerInput.requestEnvelope.request.reason}`);
 
     return handlerInput.responseBuilder.getResponse();
   },
@@ -325,8 +289,8 @@ const ErrorHandler = {
     return true;
   },
   handle(handlerInput, error) {
-    console.log('SNAILMAIL:', 'ErrorHandler');
-    console.log('SNAILMAIL:', `Error handled: ${error.message}`);
+    logger('ErrorHandler');
+    logger(`Error handled: ${error.message}`);
 
     return handlerInput.responseBuilder
       .speak('Sorry, I can\'t understand the command. Please say again.')
