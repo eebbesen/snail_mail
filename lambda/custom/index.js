@@ -192,42 +192,75 @@ const boxLocationCall = async function(addressData, timeZone) {
   return response1;
 }
 
+const executor = async function(handlerInput) {
+  console.log('SNAILMAIL:', 'CollectionBoxIntentHandler');
+  const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
+
+  const consentToken = requestEnvelope.context.System.user.permissions
+    && requestEnvelope.context.System.user.permissions.consentToken;
+  if (!consentToken) {
+    return responseBuilder
+      .speak('Please grant me permission to access your device address. Without this permission I cannot find collection boxes near you!')
+      .getResponse();
+  }
+
+  try {
+    const { deviceId } = requestEnvelope.context.System.device;
+    const directiveServiceClient = handlerInput.serviceClientFactory.getDirectiveServiceClient();
+    const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
+    const upsServiceClient = serviceClientFactory.getUpsServiceClient();
+
+    // let the user know we're working on it...
+    const pr = await progressiveResponse(requestEnvelope, directiveServiceClient);
+    console.log('SNAILMAIL: ', pr);
+
+    const address = await deviceAddressServiceClient.getFullAddress(deviceId);
+    const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
+    // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
+
+    const responseText = await boxLocationCall(address, timeZone);
+    console.log('SNAILMAIL: responseText', responseText);
+    return responseBuilder
+      .speak(responseText)
+      .getResponse();
+  } catch (error) {
+    if (error.name !== 'ServiceError') {
+      console.log('SNAILMAIL:', error);
+      const response = responseBuilder.speak('there was an error').getResponse();
+      return response;
+    }
+    throw error;
+  }
+};
+
+// https://github.com/alexa/alexa-cookbook/blob/master/feature-demos/skill-demo-progressive-response/lambda/custom/index.js
+const progressiveResponse = function(requestEnvelope, directiveServiceClient) {
+  // Call Alexa Directive Service.
+  const requestId = requestEnvelope.request.requestId;
+  const endpoint = requestEnvelope.context.System.apiEndpoint;
+  const token = requestEnvelope.context.System.apiAccessToken;
+
+  // build the progressive response directive
+  const directive = {
+    header: {
+      requestId,
+    },
+    directive: {
+      type: 'VoicePlayer.Speak',
+      speech: 'Looking for boxes. Boop beep bop boop beep bop beep! Blurp.',
+    },
+  };
+
+  // send directive
+  return directiveServiceClient.enqueue(directive, endpoint, token);
+};
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   async handle(handlerInput) {
-    console.log('SNAILMAIL:', 'CollectionBoxIntentHandler');
-    const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
-
-    const consentToken = requestEnvelope.context.System.user.permissions
-      && requestEnvelope.context.System.user.permissions.consentToken;
-    if (!consentToken) {
-      return responseBuilder
-        .speak('Please grant me permission to access your device address. Without this permission I cannot find collection boxes near you!')
-        .getResponse();
-    }
-    try {
-      const { deviceId } = requestEnvelope.context.System.device;
-      const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
-      const address = await deviceAddressServiceClient.getFullAddress(deviceId);
-      const upsServiceClient = serviceClientFactory.getUpsServiceClient();
-      const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
-      // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
-
-      const responseText = await boxLocationCall(address, timeZone);
-      console.log('SNAILMAIL: responseText', responseText);
-      return responseBuilder
-        .speak(responseText)
-        .getResponse();
-    } catch (error) {
-      if (error.name !== 'ServiceError') {
-        console.log('SNAILMAIL:', error);
-        const response = responseBuilder.speak('there was an error').getResponse();
-        return response;
-      }
-      throw error;
-    }
+    return executor(handlerInput);
   },
 };
 
@@ -237,35 +270,7 @@ const CollectionBoxIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'CollectionBoxIntent';
   },
   async handle(handlerInput) {
-    console.log('SNAILMAIL:', 'CollectionBoxIntentHandler');
-    const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
-
-    const consentToken = requestEnvelope.context.System.user.permissions
-      && requestEnvelope.context.System.user.permissions.consentToken;
-    if (!consentToken) {
-      return responseBuilder
-        .speak('Please grant me permission to access your device address. Without this permission I cannot find collection boxes near you!')
-        .getResponse();
-    }
-    try {
-      const { deviceId } = requestEnvelope.context.System.device;
-      const deviceAddressServiceClient = serviceClientFactory.getDeviceAddressServiceClient();
-      const address = await deviceAddressServiceClient.getFullAddress(deviceId);
-      // console.log('SNAILMAIL:', 'Address successfully retrieved, now responding to user.', address);
-
-      const responseText = await boxLocationCall(address);
-      console.log('SNAILMAIL: responseText', responseText);
-      return responseBuilder
-        .speak(responseText)
-        .getResponse();
-    } catch (error) {
-      if (error.name !== 'ServiceError') {
-        console.log('SNAILMAIL:', error);
-        const response = responseBuilder.speak('there was an error').getResponse();
-        return response;
-      }
-      throw error;
-    }
+    return executor(handlerInput);
   },
 };
 
