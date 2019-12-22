@@ -44,7 +44,7 @@ ask deploy
 ### JavaScript
 This suite includes a test which hits the USPS enpoint and gets results, so be aware if you are offline, firewalled, or using a CI provider that doesn't like these sorts of external calls.
 
-(Changin `test` to `test.skip` in your test files is a great way to skip any tests you don't want to run.)
+(Changing `test` to `test.skip` in your test files is a great way to skip any tests you don't want to run.)
 ```bash
 cd lambda/custom
 npm test
@@ -59,65 +59,169 @@ ask simulate -t 'Alexa, open mail buddy' -l en-US
 ## cURL example
 This calls the USPS API. I used it to understand what payload to expect.
 ```bash
-curl 'https://tools.usps.com/go/POLocatorAction.action' -H 'Content-Type: application/x-www-form-urlencoded' -H 'User-Agent: Mozilla' -H 'Accept: application/xhtml+xml' --data 'locationTypeQ=collectionbox&address=55104'
+curl 'https://tools.usps.com/UspsToolsRestServices/rest/POLocator/findLocations'  -H 'accept: application/json, text/javascript, */*; q=0.01' -H 'user-agent: Mozilla'  -H 'content-type: application/json;charset=UTF-8' -H 'referer: https://tools.usps.com/find-location.htm' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: en-US,en;q=0.9,de;q=0.8,el;q=0.7,ja;q=0.6,zh;q=0.5,de-DE;q=0.4'  --data-binary '{"maxDistance":"1","lbro":"","requestType":"collectionbox","requestServices":"","requestRefineTypes":"","requestRefineHours":"","requestCity":"st paul","requestState":"mn","requestAddressL1":"1600 grand ave"}' --compressed
 ```
 should result in a dataset that contains `result` divs like this for each collection box:
 ```HTML
-<tr class="result" id="row49">
-  <td class="hide" id="sort"><span class="sortValue">50</span></td>
-  <td class="dist">
-    <span id="locationTypeInList" class="hide">collectionbox</span>
-    <span id="zoomLevel" class="hide"></span>
-    <div class="flag" lat="44.96693" lon="-93.1822719">
-      <span class="hide-fromsighted">Begin search result number 49</span>
-      <img class="img img-55104-5510400038" src="/media/images/polo/collectionBox.png"
-        alt="Blue flag marker designating the location of this Collection Box. Clicking this icon will scroll the map on the right of this page to make the location's equivalent marker visible inside the map. This may be helpful should you wish to print your selected location." />
-    </div>
-    <div class="miles">
-      <span class="mile">1.2</span> mi
-    </div>
-  </td>
-  <td class="location">
-    <div class="link">
-      <a id="po-details-link" href="/go/POLocatorDetailsAction!input.action?locationTypeQ=collectionbox&amp;address=55104&amp;radius=20&amp;locationType=collectionbox&amp;locationID=5510400038&amp;locationName=USPS+COLLECTION+BOX+-+BLUE+BOX&amp;address2=&amp;address1=860+PRIOR+AVE+N&amp;city=SAINT+PAUL&amp;state=MN&amp;zip5=55104&amp;zip4=&amp;tollFree=&amp;fax=&amp;latitude=44.96693&amp;longitude=-93.1822719&amp;sWithin=20&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;" onclick=""><span class="po-name">USPS COLLECTION BOX - BLUE BOX</span>&nbsp;&#8250;</a>
-    </div>
-    <div class="address">
-      <span class='addressLn' id='address'>860 PRIOR AVE N</span>
-      <br />
-      <span class='cityLn' id='city'>SAINT PAUL</span>, <span class='stateLn' id='state'>MN</span>
-      <span class='zip-code' id='zipCode'>55104</span>
-      <span class='zip-5 hide' id='zip5'>55104</span>
-      <span class='zip-4 hide' id='zip4'></span><br />
-      <span class='location-ID hide' id='locationID'>5510400038</span><br />
-      <span class="phoneNum"></span><br /><br />
-    </div>
-  </td>
-  <td class="hours" >
-    <table class="hoursTable">
-      <tbody>
-        <tr>
-          <td class="hoursTable_hours" style="padding-top:0; padding-bottom:12px;">
-            <ul>
-              <li>
-                <span class="days">Mon-Sat</span>
-                <span class="hours">1:00pm</span>
-              </li>
-              <li>
-                <span class="days">Sun</span>
-                <span class="hours">Closed</span>
-              </li>
-              <li>
-                <div class="specialmsg">
-                  On 12/24 and 12/31, this box may be collected as early as 12 noon.
-                </div>
-              </li>
-            </ul>
-          </td>
-        </tr>
-        <tr>
-        </tr>
-      </tbody>
-    </table>
-  </td>
-</tr>
+{
+  "locations": [
+    {
+      "locationID": "5510500003",
+      "locationName": "USPS COLLECTION BOX - BLUE BOX",
+      "locationType": "collectionbox",
+      "radius": "1",
+      "address1": "1652 GRAND AVE",
+      "city": "SAINT PAUL",
+      "state": "MN",
+      "zip5": "55105",
+      "latitude": "44.940006282",
+      "longitude": "-93.170336866",
+      "distance": "0.20083",
+      "locationServiceHours": [
+        {
+          "name": "LASTCOLLECTION",
+          "dailyHoursList": [
+            {
+              "dayOfTheWeek": "MO",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "TU",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "WE",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "TH",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "FR",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "SA",
+              "times": [
+                {
+                  "close": "11:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "SU",
+              "times": []
+            }
+          ]
+        }
+      ],
+      "preferredSort": "1",
+      "holdMailFacility": false,
+      "accountableMailFacility": false,
+      "showNotice": "Y",
+      "specialMessage": "ON 12/24 AND 12/31, THIS BOX MAY BE COLLECTED AS EARLY AS 12 NOON."
+    },
+    {
+      "locationID": "5510500042",
+      "locationName": "USPS COLLECTION BOX - BLUE BOX",
+      "locationType": "collectionbox",
+      "radius": "1",
+      "address1": "1652 GRAND AVE",
+      "city": "SAINT PAUL",
+      "state": "MN",
+      "zip5": "55105",
+      "latitude": "44.940006282",
+      "longitude": "-93.170336866",
+      "distance": "0.20083",
+      "locationServiceHours": [
+        {
+          "name": "LASTCOLLECTION",
+          "dailyHoursList": [
+            {
+              "dayOfTheWeek": "MO",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "TU",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "WE",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "TH",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "FR",
+              "times": [
+                {
+                  "close": "15:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "SA",
+              "times": [
+                {
+                  "close": "11:00:00"
+                }
+              ]
+            },
+            {
+              "dayOfTheWeek": "SU",
+              "times": []
+            }
+          ]
+        }
+      ],
+      "preferredSort": "2",
+      "holdMailFacility": false,
+      "accountableMailFacility": false,
+      "showNotice": "Y",
+      "specialMessage": "ON 12/24 AND 12/31, THIS BOX MAY BE COLLECTED AS EARLY AS 12 NOON."
+    },
+  ],
+  "extendedSearchPerformed": false,
+  "entireRadiusListSearched": false,
+  "lastRadiusSearched": "1"
+}
 ```
