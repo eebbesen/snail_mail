@@ -143,7 +143,7 @@ const boxLocationCall = async function(addressData, timeZone) {
   if (recs && recs.length > 0) {
     const rec = recs[0]
     logger('before distance call');
-    response1 = `Your closest mailbox is ${rec.distance} miles away at ${rec.street} in ${rec.city}.`;
+    response1 = `Your closest mailbox is ${roundDistance(rec.distance)} miles away at ${rec.street} in ${rec.city}.`;
     logger('after distance call');
     const expandTimes = expandTimesMap(rec.hours);
     const npt = nextPickupTime(expandTimes, timeZone);
@@ -154,6 +154,16 @@ const boxLocationCall = async function(addressData, timeZone) {
   }
 
   return response1;
+};
+
+const roundDistance = function(distance) {
+  let d = parseFloat(distance);
+
+  if (d > 1) {
+    return Math.round(d);
+  } else {
+    return parseFloat(d.toPrecision(1));
+  }
 };
 
 const executor = async function(handlerInput) {
@@ -319,5 +329,6 @@ exports.expandTimesMap = expandTimesMap;
 exports.getBoxes = getBoxes;
 exports.nextPickupTime = nextPickupTime;
 exports.parseJson = parseJson;
+exports.roundDistance = roundDistance;
 exports.transformAddressData = transformAddressData;
 exports.twelveToTwentyFour = twelveToTwentyFour;

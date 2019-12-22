@@ -169,6 +169,16 @@ const ADDRESS_DATA = {
   postalCode: '55105'
 };
 
+test('distance less than one mile to have decimal', () => {
+  expect(index.roundDistance('0.78')).toEqual(0.8);
+  expect(index.roundDistance(0.71)).toEqual(0.7);
+});
+
+test('distance more than one mile to round', () => {
+  expect(index.roundDistance('1.78')).toEqual(2);
+  expect(index.roundDistance('3.08')).toEqual(3);
+});
+
 test('integration: gets mailboxes with address', async () => {
   console.log('********** REALLY HITS USPS WEB API **********');
   const res = await index.getBoxes(ADDRESS_DATA);
