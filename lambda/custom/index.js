@@ -2,45 +2,60 @@
 /* eslint-disable  no-console */
 
 const Alexa = require('ask-sdk-core');
-const cheerio = require('cheerio');
 const moment = require('moment-timezone');
 const { version } = require('./package.json');
 require('isomorphic-fetch');
+
+const USPS_PARAMS = {maxDistance:"1",lbro:"",requestType:"collectionbox",requestServices:"",requestRefineTypes:"",requestRefineHours:""}
 
 const logger = function(...args) {
   console.log(`SNAILMAIL ${version}:`, ...args);
 }
 
 const getBoxes = async function(address) {
-  const url = `https://tools.usps.com/go/POLocatorAction.action?locationTypeQ=collectionbox&address=${encodeURI(address)}`
+  const data = JSON.stringify(Object.assign({}, USPS_PARAMS, transformAddressData(address)));
 
-  return await fetch(url)
-    .then(response => {
-      return response.text();
-    });
+  return await fetch("https://tools.usps.com/UspsToolsRestServices/rest/POLocator/findLocations",
+  {
+    credentials:"include",
+    headers: {
+      "accept":"application/json, text/javascript, */*; q=0.01",
+      "accept-language":"en-US,en;q=0.9,de;q=0.8,el;q=0.7,ja;q=0.6,zh;q=0.5,de-DE;q=0.4",
+      "content-type":"application/json;charset=UTF-8",
+      "sec-fetch-mode":"cors",
+      "sec-fetch-site":"same-origin",
+      "x-requested-with":"XMLHttpRequest"
+    },
+    referrer:"https://tools.usps.com/find-location.htm",
+    referrerPolicy:"no-referrer-when-downgrade",
+    body: data,
+    method:"POST",
+    mode:"cors"
+  })
+  .then(response => {
+    return response.json();
+  });
 };
 
-const parseHtml = function(html) {
+const parseJson = function(json) {
   const records = new Array();
-  const $ = cheerio.load(html.toString());
-  $('.result').each(function(i, r) {
-    const rr = new Map();
-    $(this).find('.hoursTable_hours').find('li').each(function (i, o) {
-      const key = $(this).find('.days').text();
-      const val = $(this).find('.hours').text().replace(/(\t|\n)/g, '');
-      if ((key + val).trim().length > 1) {
-        rr.set(key, val);
+
+  json.locations.forEach(r => {
+    const hours = new Map();
+    r.locationServiceHours[0].dailyHoursList.forEach(h => {
+      if (h.times && h.times[0] &&  h.times[0].close){
+        hours.set(h.dayOfTheWeek, h.times[0].close)
       }
     });
 
     records.push({
-      distance: $(this).find('.mile').text(),
-      link: $(this).find('#po-details-link').attr('href'),
-      street: $(this).find('#address').text(),
-      city: $(this).find('#city').text(),
-      state: $(this).find('#state').text(),
-      zip: $(this).find('#zip5').text(),
-      hours: rr,
+      distance: r.distance,
+      link: '',
+      street: r.address1,
+      city: r.city,
+      state: r.state,
+      zip: r.zip5,
+      hours: hours
     });
   });
 
@@ -68,40 +83,15 @@ const twelveToTwentyFour = function(time){
 };
 
 const expandTimesMap = function(map) {
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const times = new Map();
-  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-  const keys = map.keys();
-  for (k of keys) {
-    switch(k) {
-      case 'Mon-Fri':
-        const tmf = map.get('Mon-Fri');
-        if (tmf != 'Closed') {
-          weekdays.forEach(d => { times.set(d, [twelveToTwentyFour(tmf), tmf])});
-        }
-        break;
-      case 'Sat':
-        const tsa = map.get('Sat');
-        if (tsa != 'Closed') {
-          times.set('Saturday', [twelveToTwentyFour(tsa), tsa]);
-        }
-        break;
-      case 'Sun':
-        const tsu = map.get('Sun');
-        if (tsu != 'Closed') {
-          times.set('Sunday', [twelveToTwentyFour(tsu), tsu]);
-        }
-        break;
-      case 'Sat-Sun':
-        const tss = map.get('Sat-Sun');
-        if (tss != 'Closed') {
-          times.set('Saturday', [twelveToTwentyFour(tss), tss]);
-          times.set('Sunday', [twelveToTwentyFour(tss), tss]);
-        }
-        break;
-      default:
-        logger(`NO ENTRY FOR ${k}`);
-    };
+  for (k of map.keys()) {
+    const regex = `^${k}`
+    const d = days.find(w => {
+      return w.toUpperCase().match(regex)}
+    )
+    times.set(d, map.get(k))
   }
 
   return times;
@@ -111,37 +101,47 @@ const nextPickupTime = function(times, timeZone) {
   const deviceTime = moment.tz(timeZone);
   const day = deviceTime.format('dddd');
   const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
+  const lastPickUpToday = times.get(day) ? times.get(day) : null;
 
-  const lastPickUpToday = times.get(day) ? times.get(day)[0] : 0;
   let pickUpDay;
   let pickUpTime;
 
-  if(lastPickUpToday > currentHourMin) {
+  if(lastPickUpToday != null && lastPickUpToday.replace(':','') > currentHourMin) {
     pickUpDay = 'Today';
-    pickUpTime = times.get(day)[1];
+    pickUpTime = times.get(day);
   } else {
-    let nextDay = moment().add(1, 'days').format('dddd');
-    if (times.get(nextDay) === undefined) {
-      nextDay = moment().add(2, 'days').format('dddd');
+    let ndc = 1;
+    let nextDay;
+    while (times.get(nextDay) === undefined) {
+      nextDay = moment().add(ndc++, 'days').format('dddd');
     }
 
     pickUpDay = nextDay;
-    pickUpTime = times.get(nextDay)[1];
+    pickUpTime = times.get(nextDay);
   }
 
   return `${pickUpDay} at ${pickUpTime}`;
 };
 
+const transformAddressData = function(addressData) {
+  return {
+    requestCity: addressData.city,
+    requestState: addressData.stateOrRegion,
+    requestAddressL1: addressData.addressLine1,
+    requestZipCode: addressData.postalCode
+  };
+};
+
 // assumes API provides pickup times in local time zone
 const boxLocationCall = async function(addressData, timeZone) {
-  const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
-  const boxData = await getBoxes(address);
-  logger('boxData', boxData);
-  const rec = parseHtml(boxData)[0];
-  logger('recs', rec);
+  // const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
+  const boxData = await getBoxes(addressData);
+  const recs = parseJson(boxData);
+  logger('recs', recs);
 
   let response1 = 'Sorry, I could not find any mailboxes near you. Please make sure your Alexa device has your correct address entered';
-  if (rec && rec.distance) {
+  if (recs && recs.length > 0) {
+    const rec = recs[0]
     logger('before distance call');
     response1 = `Your closest mailbox is ${rec.distance} miles away at ${rec.street} in ${rec.city}.`;
     logger('after distance call');
@@ -154,10 +154,11 @@ const boxLocationCall = async function(addressData, timeZone) {
   }
 
   return response1;
-}
+};
 
 const executor = async function(handlerInput) {
   logger('CollectionBoxIntentHandler');
+  logger(JSON.stringify(handlerInput.requestEnvelope, null, 2));
   const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
 
   const consentToken = requestEnvelope.context.System.user.permissions
@@ -183,7 +184,7 @@ const executor = async function(handlerInput) {
     // logger('Address successfully retrieved, now responding to user.', address);
 
     const responseText = await boxLocationCall(address, timeZone);
-    logger(responseText', responseText);
+    logger('responseText', responseText);
     return responseBuilder
       .speak(responseText)
       .getResponse();
@@ -211,7 +212,7 @@ const progressiveResponse = function(requestEnvelope, directiveServiceClient) {
     },
     directive: {
       type: 'VoicePlayer.Speak',
-      speech: 'Looking for boxes. Boop beep bop boop beep bop beep! Blurp.',
+      speech: 'Looking for boxes near your location',
     },
   };
 
@@ -317,5 +318,6 @@ exports.boxLocationCall = boxLocationCall;
 exports.expandTimesMap = expandTimesMap;
 exports.getBoxes = getBoxes;
 exports.nextPickupTime = nextPickupTime;
-exports.parseHtml = parseHtml;
+exports.parseJson = parseJson;
+exports.transformAddressData = transformAddressData;
 exports.twelveToTwentyFour = twelveToTwentyFour;
