@@ -169,6 +169,19 @@ const ADDRESS_DATA = {
   postalCode: '55105'
 };
 
+test('ensures zip code is five-digit start with five-digit', () => {
+  expect(index.transformZipCode(ADDRESS_DATA.postalCode)).toEqual(ADDRESS_DATA.postalCode);
+});
+
+test('ensures zip code is five-digit start with nine-digit', () => {
+  expect(index.transformZipCode('55105-1234')).toEqual(ADDRESS_DATA.postalCode);
+});
+
+test('convert from 24 hour time to am/pm', () => {
+  expect(index.convertTime('15:00')).toEqual('3:00 PM');
+  expect(index.convertTime('7:00')).toEqual('7:00 AM');
+});
+
 test('distance less than one mile to have decimal', () => {
   expect(index.roundDistance('0.78')).toEqual(0.8);
   expect(index.roundDistance(0.71)).toEqual(0.7);
@@ -182,6 +195,23 @@ test('distance more than one mile to round', () => {
 test('integration: gets mailboxes with address', async () => {
   console.log('********** REALLY HITS USPS WEB API **********');
   const res = await index.getBoxes(ADDRESS_DATA);
+  const records = index.parseJson(res);
+
+  expect(records.length).toBeGreaterThan(2);
+  const rec = records[0];
+  expect(rec.distance).toEqual('0.20083');
+  expect(rec.street).toEqual('1652 GRAND AVE');
+  expect(rec.city).toEqual('SAINT PAUL');
+  expect(rec.state).toEqual('MN');
+  expect(rec.zip).toEqual('55105');
+  expect(rec.hours.get('MO')).toBe('15:00:00');
+});
+
+test('integration: gets mailboxes with address with zip nine', async () => {
+  console.log('********** REALLY HITS USPS WEB API **********');
+  const ad = ADDRESS_DATA;
+  ad.postalCode = '55105-1234';
+  const res = await index.getBoxes(ad);
   const records = index.parseJson(res);
 
   expect(records.length).toBeGreaterThan(2);
@@ -232,7 +262,7 @@ test('gets next pickup time current day', () => {
   const hours = index.expandTimesMap(times);
   const result = index.nextPickupTime(hours,'America/New_York');
 
-  expect(result).toEqual('Today at 23:59');
+  expect(result).toEqual('Today at 11:59 PM');
 });
 
 test('gets next pickup time next day', () => {
@@ -249,7 +279,7 @@ test('gets next pickup time next day', () => {
   const result = index.nextPickupTime(hours,'America/New_York');
 
   const nextDay = moment().add(1, 'days').format('dddd')
-  expect(result).toEqual(`${nextDay} at 00:01`);
+  expect(result).toEqual(`${nextDay} at 12:01 AM`);
 });
 
 test('gets next pickup time none tomorrow', () => {
@@ -262,7 +292,7 @@ test('gets next pickup time none tomorrow', () => {
   const result = index.nextPickupTime(hours,'America/New_York');
 
   const nextDay = moment().add(2, 'days').format('dddd')
-  expect(result).toEqual(`${nextDay} at 23:59`);
+  expect(result).toEqual(`${nextDay} at 11:59 PM`);
 });
 
 test('gets next pickup time none today', () => {
@@ -273,7 +303,7 @@ test('gets next pickup time none today', () => {
   const result = index.nextPickupTime(hours,'America/New_York');
 
   const nextDay = moment().add(2, 'days').format('dddd')
-  expect(result).toEqual(`${nextDay} at 23:59`);
+  expect(result).toEqual(`${nextDay} at 11:59 PM`);
 });
 
 test('expands times map', () => {

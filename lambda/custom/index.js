@@ -120,7 +120,7 @@ const nextPickupTime = function(times, timeZone) {
     pickUpTime = times.get(nextDay);
   }
 
-  return `${pickUpDay} at ${pickUpTime}`;
+  return `${pickUpDay} at ${convertTime(pickUpTime)}`;
 };
 
 const transformAddressData = function(addressData) {
@@ -128,14 +128,25 @@ const transformAddressData = function(addressData) {
     requestCity: addressData.city,
     requestState: addressData.stateOrRegion,
     requestAddressL1: addressData.addressLine1,
-    requestZipCode: addressData.postalCode
+    requestZipCode: transformZipCode(addressData.postalCode)
   };
+};
+
+const transformZipCode = function(zipCode) {
+  let pc = zipCode;
+
+  if (pc) {
+    pc = pc.substring(0, 5);
+  }
+
+  return pc;
 };
 
 // assumes API provides pickup times in local time zone
 const boxLocationCall = async function(addressData, timeZone) {
-  // const address = [addressData.addressLine1, addressData.city, addressData.stateOrRegion, addressData.postalCode].join(', ')
+  logger('addressData', addressData)
   const boxData = await getBoxes(addressData);
+  logger('boxData', boxData)
   const recs = parseJson(boxData);
   logger('recs', recs);
 
@@ -165,6 +176,10 @@ const roundDistance = function(distance) {
     return parseFloat(d.toPrecision(1));
   }
 };
+
+const convertTime = function(time) {
+  return moment(time, 'HH:mm').format('h:mm A');
+}
 
 const executor = async function(handlerInput) {
   logger('CollectionBoxIntentHandler');
@@ -325,10 +340,12 @@ exports.handler = skillBuilder
   .lambda();
 
 exports.boxLocationCall = boxLocationCall;
+exports.convertTime = convertTime;
 exports.expandTimesMap = expandTimesMap;
 exports.getBoxes = getBoxes;
 exports.nextPickupTime = nextPickupTime;
 exports.parseJson = parseJson;
 exports.roundDistance = roundDistance;
 exports.transformAddressData = transformAddressData;
+exports.transformZipCode =transformZipCode;
 exports.twelveToTwentyFour = twelveToTwentyFour;
