@@ -40,7 +40,7 @@ const getBoxes = async function(address) {
 const parseJson = function(json) {
   const records = new Array();
 
-  json.locations.forEach(r => {
+  json.locations.slice(0, 11).forEach(r => {
     const hours = new Map();
     r.locationServiceHours[0].dailyHoursList.forEach(h => {
       if (h.times && h.times[0] &&  h.times[0].close){
@@ -100,14 +100,17 @@ const expandTimesMap = function(map) {
 const nextPickupTime = function(times, timeZone) {
   const deviceTime = moment.tz(timeZone);
   const day = deviceTime.format('dddd');
-  const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm'));
-  const lastPickUpToday = times.get(day) ? times.get(day) : null;
-
+  const currentHourMin = parseInt(deviceTime.format('H') + deviceTime.format('mm')  + deviceTime.format('ss'));
+  let lastPickUpToday = times.get(day) ? times.get(day) : null;
+  if (lastPickUpToday != null) {
+    const regex = /:/g;
+    lastPickUpToday = lastPickUpToday.replace(regex,'');
+  }
   let pickUpDay;
   let pickUpTime;
 
-  if(lastPickUpToday != null && lastPickUpToday.replace(':','') > currentHourMin) {
-    pickUpDay = 'Today';
+  if(lastPickUpToday != null && lastPickUpToday > currentHourMin) {
+    pickUpDay = 'today';
     pickUpTime = times.get(day);
   } else {
     let ndc = 1;
@@ -144,21 +147,17 @@ const transformZipCode = function(zipCode) {
 
 // assumes API provides pickup times in local time zone
 const boxLocationCall = async function(addressData, timeZone) {
-  logger('addressData', addressData)
+  logger('addressData', JSON.stringify(addressData, null, 4));
   const boxData = await getBoxes(addressData);
-  logger('boxData', boxData)
   const recs = parseJson(boxData);
-  logger('recs', recs);
+  logger('recs', JSON.stringify(recs, null, 4));
 
   let response1 = 'Sorry, I could not find any mailboxes near you. Please make sure your Alexa device has your correct address entered';
   if (recs && recs.length > 0) {
     const rec = recs[0]
-    logger('before distance call');
     response1 = `Your closest mailbox is ${roundDistance(rec.distance)} miles away at ${rec.street} in ${rec.city}.`;
-    logger('after distance call');
     const expandTimes = expandTimesMap(rec.hours);
     const npt = nextPickupTime(expandTimes, timeZone);
-    logger('after pickup time call');
     if (npt) {
       response1 += ` Your next pickup time is ${npt}`;
     }
@@ -182,8 +181,7 @@ const convertTime = function(time) {
 }
 
 const executor = async function(handlerInput) {
-  logger('CollectionBoxIntentHandler');
-  logger(JSON.stringify(handlerInput.requestEnvelope, null, 2));
+  logger(JSON.stringify(handlerInput.requestEnvelope, null, 4));
   const { requestEnvelope, serviceClientFactory, responseBuilder } = handlerInput;
 
   const consentToken = requestEnvelope.context.System.user.permissions
@@ -206,7 +204,6 @@ const executor = async function(handlerInput) {
 
     const address = await deviceAddressServiceClient.getFullAddress(deviceId);
     const timeZone = await upsServiceClient.getSystemTimeZone(deviceId);
-    // logger('Address successfully retrieved, now responding to user.', address);
 
     const responseText = await boxLocationCall(address, timeZone);
     logger('responseText', responseText);

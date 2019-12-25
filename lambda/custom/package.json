@@ -1,6 +1,6 @@
 {
   "name": "snail_mail",
-  "version": "2.1.0",
+  "version": "2.1.2",
   "description": "Alexa skill to find the USPS collection boxes nearest you!",
   "repository": "https://gitlab.com/eebbesen/alexa-snail_mail",
   "main": "index.js",
