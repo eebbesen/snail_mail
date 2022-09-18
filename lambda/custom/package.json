@@ -11,17 +11,17 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "ask-sdk-core": "^2.2.0",
-    "ask-sdk-model": "^1.7.1",
-    "isomorphic-fetch": "^2.2.1",
-    "moment-timezone": "^0.5.23"
+    "ask-sdk-core": "latest",
+    "ask-sdk-model": "latest",
+    "isomorphic-fetch": "latest",
+    "moment-timezone": "latest"
   },
   "engines": {
-    "node": ">=12.13.1"
+    "node": ">=14.18.0"
   },
   "devDependencies": {
-    "eslint-config-airbnb-base": "^13.1.0",
-    "eslint-plugin-jest": "^21.25.1",
-    "jest": "^25.0.0"
+    "eslint-config-airbnb-base": "latest",
+    "eslint-plugin-jest": "latest",
+    "jest": "latest"
   }
 }

@@ -92,7 +92,7 @@ const USPS_RESPONSE = {
       "locationName": "USPS COLLECTION BOX - BLUE BOX",
       "locationType": "collectionbox",
       "radius": "1",
-      "address1": "1652 GRAND AVE",
+      "address1": "1579 GRAND AVE",
       "city": "SAINT PAUL",
       "state": "MN",
       "zip5": "55105",
@@ -169,7 +169,7 @@ const USPS_RESPONSE = {
       "locationName": "USPS COLLECTION BOX - BLUE BOX",
       "locationType": "collectionbox",
       "radius": "1",
-      "address1": "1652 GRAND AVE",
+      "address1": "1579 GRAND AVE",
       "city": "SAINT PAUL",
       "state": "MN",
       "zip5": "55105",
@@ -291,12 +291,12 @@ test('integration: gets mailboxes with address', async () => {
 
   expect(records.length).toBeGreaterThan(2);
   const rec = records[0];
-  expect(rec.distance).toEqual('0.20083');
-  expect(rec.street).toEqual('1652 GRAND AVE');
+  expect(rec.distance).toEqual('0.06626');
+  expect(rec.street).toEqual('1579 GRAND AVE');
   expect(rec.city).toEqual('SAINT PAUL');
   expect(rec.state).toEqual('MN');
   expect(rec.zip).toEqual('55105');
-  expect(rec.hours.get('MO')).toBe('15:00:00');
+  expect(rec.hours.get('MO')).toBe('16:00:00');
 });
 
 test('integration: gets mailboxes with address with zip nine', async () => {
@@ -308,12 +308,12 @@ test('integration: gets mailboxes with address with zip nine', async () => {
 
   expect(records.length).toBeGreaterThan(2);
   const rec = records[0];
-  expect(rec.distance).toEqual('0.20083');
-  expect(rec.street).toEqual('1652 GRAND AVE');
+  expect(rec.distance).toEqual('0.06626');
+  expect(rec.street).toEqual('1579 GRAND AVE');
   expect(rec.city).toEqual('SAINT PAUL');
   expect(rec.state).toEqual('MN');
   expect(rec.zip).toEqual('55105');
-  expect(rec.hours.get('MO')).toBe('15:00:00');
+  expect(rec.hours.get('MO')).toBe('16:00:00');
 });
 
 test('builds address data PO expects from device address', () => {
