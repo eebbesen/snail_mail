@@ -10,5 +10,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 14.18.0
+      - run: npm install
+        working-directory: ./lambda/custom
       - run: npm test
         working-directory: ./lambda/custom
