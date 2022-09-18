@@ -40,6 +40,11 @@ npm install
 ask deploy
 ```
 
+Or generate a zip file to deploy to AWS
+```bash
+npm run zpack
+```
+
 ## Testing
 ### JavaScript
 This suite includes a test which hits the USPS enpoint and gets results, so be aware if you are offline, firewalled, or using a CI provider that doesn't like these sorts of external calls.
