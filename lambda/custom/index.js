@@ -4,7 +4,8 @@
 const Alexa = require('ask-sdk-core');
 const moment = require('moment-timezone');
 const { version } = require('./package.json');
-require('isomorphic-fetch');
+// require('isomorphic-fetch');
+const fetch = require('node-fetch');
 
 const USPS_PARAMS = {maxDistance:"1",lbro:"",requestType:"collectionbox",requestServices:"",requestRefineTypes:"",requestRefineHours:""}
 
@@ -39,6 +40,7 @@ const getBoxes = async function(address) {
 
 const parseJson = function(json) {
   const records = new Array();
+  console.log("PARSEJSON\n", json);
 
   json.locations.slice(0, 11).forEach(r => {
     const hours = new Map();
