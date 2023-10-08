@@ -291,12 +291,12 @@ test('integration: gets mailboxes with address', async () => {
 
   expect(records.length).toBeGreaterThan(2);
   const rec = records[0];
-  expect(rec.distance).toEqual('0.06626');
-  expect(rec.street).toEqual('1579 GRAND AVE');
+  expect(rec.distance).toEqual('0.18179');
+  expect(rec.street).toEqual('1652 GRAND AVE');
   expect(rec.city).toEqual('SAINT PAUL');
   expect(rec.state).toEqual('MN');
   expect(rec.zip).toEqual('55105');
-  expect(rec.hours.get('MO')).toBe('16:00:00');
+  expect(rec.hours.get('MO')).toBe('15:00:00');
 });
 
 test('integration: gets mailboxes with address with zip nine', async () => {
@@ -308,12 +308,12 @@ test('integration: gets mailboxes with address with zip nine', async () => {
 
   expect(records.length).toBeGreaterThan(2);
   const rec = records[0];
-  expect(rec.distance).toEqual('0.06626');
-  expect(rec.street).toEqual('1579 GRAND AVE');
+  expect(rec.distance).toEqual('0.18179');
+  expect(rec.street).toEqual('1652 GRAND AVE');
   expect(rec.city).toEqual('SAINT PAUL');
   expect(rec.state).toEqual('MN');
   expect(rec.zip).toEqual('55105');
-  expect(rec.hours.get('MO')).toBe('16:00:00');
+  expect(rec.hours.get('MO')).toBe('15:00:00');
 });
 
 test('builds address data PO expects from device address', () => {
